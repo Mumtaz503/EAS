@@ -49,26 +49,36 @@ const {
         );
       });
       describe("registerSchema", () => {
-        it("Should return a schema UID", async () => {
-          const name = "mumtaz";
-          const date = new Date("1997-06-22");
-          const unixDate = Math.floor(date.getTime() / 1000);
+        it("Should return the schema Data", async () => {
+          const data = {
+            name: "Mumtaz Ahmad",
+            dateOfBirth: 19970622,
+            nationality: "Pakistani",
+            residence: "Pakistan",
+          };
 
           const transactionResponse = await createSchema
             .connect(userSigner)
-            .registerSchema(name, unixDate);
-          await transactionResponse.wait(1);
+            .registerSchema(data);
 
-          const schemaUID = await createSchema.getSchemaUID();
-          console.log("schemaUID", schemaUID);
+          const transactionReciept = await transactionResponse.wait(1);
 
-          const schemaEncoder = new SchemaEncoder(
-            "string _name, bool _isValid"
+          const schemaUID = transactionReciept.logs[0].topics[1];
+
+          const schema = await schemaRegistry.getSchema(schemaUID);
+
+          console.log(`Schema for ${user}:\n`, schema[3]);
+
+          const schemaENcoder = new SchemaEncoder(
+            "string name, uint64 dateOfBirth, string nationality, string residence, bool isValid"
           );
 
-          const encodedData = schemaEncoder.encodeData([
-            { name: "_name", value: name, type: "string" },
-            { name: "_isValid", value: true, type: "bool" },
+          const encodedData = schemaENcoder.encodeData([
+            { name: "name", value: data.name, type: "string" },
+            { name: "dateOfBirth", value: data.dateOfBirth, type: "uint64" },
+            { name: "nationality", value: data.nationality, type: "string" },
+            { name: "residence", value: data.residence, type: "string" },
+            { name: "isValid", value: true, type: "bool" },
           ]);
 
           const tx = await eas.attest({
@@ -82,9 +92,9 @@ const {
               value: ethers.parseEther("0"),
             },
           });
-          const txRec = await tx.wait(1);
+          const rec = await tx.wait(1);
 
-          const UidFromCall = txRec.logs[0].data;
+          const UidFromCall = rec.logs[0].data;
 
           const isAttestationValidT = await eas.isAttestationValid(UidFromCall);
 

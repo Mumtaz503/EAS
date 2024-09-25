@@ -8,20 +8,49 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract CreateSchema {
     using Strings for uint256;
 
+    struct VerificationData {
+        string name;
+        uint64 dateOfBirth; // YYYYMMDD
+        string nationality;
+        string residence;
+    }
+
     ISchemaRegistry private immutable i_schemaRegistery;
     ISchemaResolver private immutable i_schemaResolver;
 
-    bytes32 private s_schemaUID;
+    mapping(bytes32 => string) private s_schemaUIDToVerificationData;
 
     constructor(address _schemaRegistery, address _resolver) {
         i_schemaRegistery = ISchemaRegistry(_schemaRegistery);
         i_schemaResolver = ISchemaResolver(_resolver);
     }
 
-    function registerSchema(string calldata _name, uint256 _dob) external {
-        string memory dob = _dob.toString();
+    function registerSchema(
+        VerificationData calldata _verificationDataObj
+    ) external returns (bytes32) {
+        uint64 dobFromCalldata = _verificationDataObj.dateOfBirth;
 
-        string memory schema = string(abi.encodePacked(_name, ": ", dob));
+        string memory dob = uint256(dobFromCalldata).toString();
+
+        string memory schema = string(
+            abi.encodePacked(
+                "Name",
+                ": ",
+                _verificationDataObj.name,
+                " | ",
+                "Date Of Birth",
+                ": ",
+                dob,
+                " | ",
+                "Nationality",
+                ": ",
+                _verificationDataObj.nationality,
+                " | ",
+                "Residence",
+                ": ",
+                _verificationDataObj.residence
+            )
+        );
         bool revokable = true;
 
         bytes32 schemaUID = i_schemaRegistery.register(
@@ -30,10 +59,8 @@ contract CreateSchema {
             revokable
         );
 
-        s_schemaUID = schemaUID;
-    }
+        s_schemaUIDToVerificationData[schemaUID] = schema;
 
-    function getSchemaUID() public view returns (bytes32) {
-        return s_schemaUID;
+        return schemaUID;
     }
 }
